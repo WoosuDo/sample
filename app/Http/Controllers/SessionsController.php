@@ -7,11 +7,9 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
 
-use App\Models\User;
-
 use Auth;
 
-class UsersController extends Controller
+class SessionsController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -30,7 +28,7 @@ class UsersController extends Controller
      */
     public function create()
     {
-        return view('users.create');
+        return view('sessions.create');
     }
 
     /**
@@ -42,20 +40,23 @@ class UsersController extends Controller
     public function store(Request $request)
     {
         $this->validate($request, [
-          'name' => 'required|max:50',
-          'email' => 'required|email|unique:users|max:255',
-          'password' => 'required|confirmed'
+          'email' => 'required|email|max:255',
+          'password' => 'required'
         ]);
 
-        $user = User::create([
-          'name' => $request->name,
+        $credentials = [
           'email' => $request->email,
-          'password' => bcrypt($request->password)
-        ]);
+          'password' => $request->password
+        ];
 
-        Auth::login($user);
-        session()->flash('success', 'Welcome! Remember, winter is coming.');
-        return redirect()->route('users.show', [$user]);
+        if(Auth::attempt($credentials, $request->has('remember'))){
+          session()->flash('success', 'Welcome back.');
+          return redirect()->route('users.show', [Auth::user()]);
+        }else{
+          session()->flash('danger', '很抱歉，您的邮箱或密码不正确。');
+          return redirect()->back();
+        }
+        return;
     }
 
     /**
@@ -66,8 +67,7 @@ class UsersController extends Controller
      */
     public function show($id)
     {
-      $user = User::findOrFail($id);
-      return view('users.show', compact('user'));
+        //
     }
 
     /**
@@ -99,9 +99,10 @@ class UsersController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy()
     {
-        //
+        Auth::logout();
+        session()->flash('success', '您已经成功退出。');
+        return redirect('login');
     }
-
 }
